@@ -21,16 +21,12 @@ public class Main {
 	
 	public static void main(String[] args) {
 		try {
-			
+			// Variables setup
 			ArrayList<ArrayList<String>> highestAchievers = new ArrayList<ArrayList<String>>();
 			ArrayList<ArrayList<String>> temp = new ArrayList<ArrayList<String>>();
 			ArrayList<Integer> mark = new ArrayList<Integer>();
 			
-			HSSFWorkbook outputBook = new HSSFWorkbook();
-			HSSFSheet out = outputBook.createSheet();
-			int outIdx = 0;
-			
-			HSSFSheet sheet = readExcel("./src/rss/LCLARKSO2022.xls", 0);
+			HSSFSheet sheet = readExcel("LCLARKSO2022.xls", 0);
 			int idx = 1;
 			HSSFRow row = sheet.getRow(idx);
 			String unitCode = sheet.getRow(idx).getCell(UNITCODE).getStringCellValue();
@@ -54,32 +50,17 @@ public class Main {
 					idx++;
 					row = sheet.getRow(idx);
 				} else {
-					if( temp.size()>=10 ) {
-						int topScore = mark.get(0);
-						// Add all high-achievers
-						for(int i=0; i<temp.size(); i++) {
-							// Add 1 high achiever data
-							if (mark.get(i) == topScore) {
-								out.createRow(outIdx).createCell(0).setCellValue(temp.get(i).get(STUDENTID));
-								out.getRow(outIdx).createCell(1).setCellValue(temp.get(i).get(FIRSTNAME));
-								out.getRow(outIdx).createCell(2).setCellValue(temp.get(i).get(LASTNAME));
-								out.getRow(outIdx).createCell(3).setCellValue(temp.get(i).get(UNITCODE));
-								out.getRow(outIdx).createCell(4).setCellValue(temp.get(i).get(UNITNAME));
-								out.getRow(outIdx).createCell(5).setCellValue(mark.get(i));
-								outIdx++;
-							}
-						}
-					}
+					addHighestAchievers(highestAchievers,temp, mark);
 					temp.clear();
 					mark.clear();
 					unitCode = row.getCell(UNITCODE).getStringCellValue();
 				}
 			}
+			addHighestAchievers(highestAchievers, temp, mark);
 			
-			FileOutputStream outputStream = new FileOutputStream("JavaBooks.xls");
-	        outputBook.write(outputStream);
-			
-			System.out.println(temp);
+			//write to output Excel file
+			HSSFWorkbook outputBook = writeWorkbook(highestAchievers, mark);
+			writeExcel(outputBook);
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -97,7 +78,46 @@ public class Main {
 		return sheet;
 	}
 	
+	public static void writeExcel(HSSFWorkbook outBook) throws IOException {
+		FileOutputStream outputStream = new FileOutputStream("JavaBooks.xls");
+        outBook.write(outputStream);
+	}
+	
+	public static HSSFWorkbook writeWorkbook(ArrayList<ArrayList<String>> list, ArrayList<Integer> grade) {
+		// Setup workbook
+		HSSFWorkbook retVal = new HSSFWorkbook();
+		HSSFSheet sheet = retVal.createSheet("First in Subject");
+		// Create Title row
+		HSSFRow title = sheet.createRow(0);
+		title.createCell(0).setCellValue("Student ID");
+		title.createCell(1).setCellValue("First Name");
+		title.createCell(2).setCellValue("Last Name");
+		title.createCell(3).setCellValue("Unit Code");
+		title.createCell(4).setCellValue("Unit Name");
+		// Fill all data rows
+		int idx=1;
+		for (ArrayList<String> studentEntry: list) {
+			HSSFRow row = sheet.createRow(idx);
+			row.createCell(0).setCellValue(studentEntry.get(STUDENTID));
+			row.createCell(1).setCellValue(studentEntry.get(FIRSTNAME));
+			row.createCell(2).setCellValue(studentEntry.get(LASTNAME));
+			row.createCell(3).setCellValue(studentEntry.get(UNITCODE));
+			row.createCell(4).setCellValue(studentEntry.get(UNITNAME));
+			idx++;
+		}
+		return retVal;
+	}
+	
 	public static void addHighestAchievers(ArrayList<ArrayList<String>> target, ArrayList<ArrayList<String>> temp, ArrayList<Integer> grade) {
-		
+		int topScore = grade.get(0);
+		if( temp.size() < 10 ) return;
+		if (topScore < 85) return; 
+		// Add all high-achievers
+		for(int i=0; i<temp.size(); i++) {
+			// Add 1 high achiever data
+			if (grade.get(i) == topScore) {
+				target.add(temp.get(i));
+			}
+		}
 	}
 }
