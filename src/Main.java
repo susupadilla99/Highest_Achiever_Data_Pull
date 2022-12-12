@@ -3,11 +3,13 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -28,11 +30,13 @@ public class Main {
 			ArrayList<ArrayList<String>> temp = new ArrayList<ArrayList<String>>();
 			ArrayList<Integer> mark = new ArrayList<Integer>();
 			
+			// Step 1: Setup
 			HSSFSheet sheet = readExcel1("LCLARKSO2022.xls", 0);
 			int idx = 1;
 			HSSFRow row = sheet.getRow(idx);
 			String unitCode = sheet.getRow(idx).getCell(UNITCODE).getStringCellValue();
 			
+			// Step 1: Generate list of all FirstInSubject
 			while (row != null) {
 				System.out.println(idx);
 				if (sheet.getRow(idx).getCell(UNITCODE).getStringCellValue().equals(unitCode)) {
@@ -60,8 +64,66 @@ public class Main {
 			}
 			addHighestAchievers(highestAchievers, temp, mark);
 			
-			//write to output Excel file
+			// Step 1: Write FirstInSubject to output Excel Workbook
 			HSSFWorkbook outputBook = writeWorkbook(highestAchievers, mark);
+			
+			
+			// Step 2: Setup
+			HSSFWorkbook db = readExcel2("HighAchieverDatabase.xls");
+			idx = 0;
+			ArrayList<ArrayList<String>> commendations = new ArrayList<ArrayList<String>>();
+			
+			// Step 2: Find all this-session commendations
+			highestAchievers.sort( new StudentEntryComparator() );
+			while (idx<highestAchievers.size()) {
+				if (idx<highestAchievers.size() && highestAchievers.get(idx).get(0).equals(highestAchievers.get(idx+1).get(0))) {
+					String id = highestAchievers.get(idx).get(STUDENTID);
+					ArrayList<String> commd = new ArrayList<String>();
+					commd.add(highestAchievers.get(idx).get(STUDENTID));
+					commd.add(highestAchievers.get(idx).get(LASTNAME));
+					commd.add(highestAchievers.get(idx).get(FIRSTNAME));
+					String note = highestAchievers.get(idx).get(UNITCODE);
+					idx++;
+					while( idx< highestAchievers.size() && id.equals(highestAchievers.get(idx).get(STUDENTID)) ) {
+						note += " - " + highestAchievers.get(idx).get(UNITCODE);
+						idx++;
+					}
+					commd.add(note);
+					commendations.add( commd );
+				} else {
+					idx++;
+				}
+			}
+			
+			System.out.println("----------------------");
+			
+			// Step 2: Filter out previously commended
+			ArrayList<String> prevCommd = new ArrayList<String>();
+			sheet = db.getSheetAt(1); // get sheet of all historic commended
+			row = sheet.getRow(1);
+			int prevCommdIdx = 1;
+			// generate list of prev commended
+			while(row != null) {
+				prevCommd.add( ""+ (int) row.getCell(STUDENTID).getNumericCellValue() );
+				prevCommdIdx++;
+				row = sheet.getRow(prevCommdIdx);
+			}
+			
+			System.out.println(prevCommd);
+			
+			printList(commendations);
+			
+			// filter our prev commended
+			for(int i=0; i<commendations.size(); i++) {
+				if ( contain(prevCommd,commendations.get(i).get(STUDENTID)) ) {
+					System.out.println(commendations.get(i).get(FIRSTNAME) + " " + commendations.get(i).get(LASTNAME)+" removed.");
+					commendations.remove(i);
+				}
+			}
+			
+			printList(commendations);
+			
+			
 			writeExcel(outputBook);
 			
 		} catch (IOException e) {
@@ -77,9 +139,9 @@ public class Main {
 		return sheet;
 	}
 	
-	public static XSSFWorkbook readExcel2(String path, int sheetIdx) throws IOException {
+	public static HSSFWorkbook readExcel2(String path) throws IOException {
 		FileInputStream inputStream = new FileInputStream(path);
-		XSSFWorkbook wb = new XSSFWorkbook(inputStream);
+		HSSFWorkbook wb = new HSSFWorkbook(inputStream);
 		return wb;
 	}
 	
@@ -125,4 +187,20 @@ public class Main {
 			}
 		}
 	}
+	
+	public static boolean contain(ArrayList<String> list, String target) {
+		for (String entry: list) {
+			if (entry.equals(target)) return true;
+		}
+		return false;
+	}
+	
+	private static void printList(ArrayList<ArrayList<String>> list) {
+		System.out.println("-----------------------");
+		for (ArrayList<String> entry: list) {
+			System.out.println(entry);
+		}
+		System.out.println("-----------------------");
+	}
+	
 }
