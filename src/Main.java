@@ -8,6 +8,8 @@ import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class Main {
 	
@@ -26,7 +28,7 @@ public class Main {
 			ArrayList<ArrayList<String>> temp = new ArrayList<ArrayList<String>>();
 			ArrayList<Integer> mark = new ArrayList<Integer>();
 			
-			HSSFSheet sheet = readExcel("LCLARKSO2022.xls", 0);
+			HSSFSheet sheet = readExcel1("LCLARKSO2022.xls", 0);
 			int idx = 1;
 			HSSFRow row = sheet.getRow(idx);
 			String unitCode = sheet.getRow(idx).getCell(UNITCODE).getStringCellValue();
@@ -68,14 +70,17 @@ public class Main {
 		
 	}
 	
-	public static HSSFSheet readExcel(String path, int sheetIdx) throws IOException {
+	public static HSSFSheet readExcel1(String path, int sheetIdx) throws IOException {
 		FileInputStream inputStream = new FileInputStream(path);
-		
 		HSSFWorkbook wb = new HSSFWorkbook(inputStream);
-		
 		HSSFSheet sheet = wb.getSheetAt(sheetIdx);
-		
 		return sheet;
+	}
+	
+	public static XSSFWorkbook readExcel2(String path, int sheetIdx) throws IOException {
+		FileInputStream inputStream = new FileInputStream(path);
+		XSSFWorkbook wb = new XSSFWorkbook(inputStream);
+		return wb;
 	}
 	
 	public static void writeExcel(HSSFWorkbook outBook) throws IOException {
