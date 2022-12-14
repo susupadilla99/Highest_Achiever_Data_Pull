@@ -1,17 +1,11 @@
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
 
-import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.xssf.usermodel.XSSFRow;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class Main {
 	
@@ -26,19 +20,19 @@ public class Main {
 	public static void main(String[] args) {
 		try {
 			// Variables setup
-			ArrayList<ArrayList<String>> highestAchievers = new ArrayList<ArrayList<String>>();
-			ArrayList<ArrayList<String>> temp = new ArrayList<ArrayList<String>>();
+			ArrayList<ArrayList<String>> firstInSubject = new ArrayList<ArrayList<String>>();
 			ArrayList<Integer> mark = new ArrayList<Integer>();
+			ArrayList<ArrayList<String>> temp = new ArrayList<ArrayList<String>>();
+			ArrayList<Integer> tempMark = new ArrayList<Integer>();
 			
 			// Step 1: Setup
-			HSSFSheet sheet = readExcel1("LCLARKSO2022.xls", 0);
+			HSSFSheet sheet = readExcel1("GeneratedFile.xls", 0);
 			int idx = 1;
 			HSSFRow row = sheet.getRow(idx);
 			String unitCode = sheet.getRow(idx).getCell(UNITCODE).getStringCellValue();
 			
 			// Step 1: Generate list of all FirstInSubject
 			while (row != null) {
-				System.out.println(idx);
 				if (sheet.getRow(idx).getCell(UNITCODE).getStringCellValue().equals(unitCode)) {
 					temp.add(new ArrayList<String>());
 					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(STUDENTID).getStringCellValue() );
@@ -52,40 +46,62 @@ public class Main {
 					
 					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(UNITCODE).getStringCellValue() );
 					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(UNITNAME).getStringCellValue() );
-					mark.add( (int) Math.round(sheet.getRow(idx).getCell(MARK).getNumericCellValue()) );
+					tempMark.add( (int) Math.round(sheet.getRow(idx).getCell(MARK).getNumericCellValue()) );
 					idx++;
 					row = sheet.getRow(idx);
 				} else {
-					addHighestAchievers(highestAchievers,temp, mark);
+					addFirstInSubject(firstInSubject, mark, temp, tempMark);
 					temp.clear();
-					mark.clear();
+					tempMark.clear();
 					unitCode = row.getCell(UNITCODE).getStringCellValue();
 				}
 			}
-			addHighestAchievers(highestAchievers, temp, mark);
+			addFirstInSubject(firstInSubject, mark, temp, tempMark);
 			
 			// Step 1: Write FirstInSubject to output Excel Workbook
-			HSSFWorkbook outputBook = writeWorkbook(highestAchievers, mark);
+			HSSFWorkbook outputBook = writeWorkbook(firstInSubject, mark);
 			
 			
 			// Step 2: Setup
 			HSSFWorkbook db = readExcel2("HighAchieverDatabase.xls");
 			idx = 0;
 			ArrayList<ArrayList<String>> commendations = new ArrayList<ArrayList<String>>();
+			ArrayList<ArrayList<String>> fisCopy = (ArrayList<ArrayList<String>>) firstInSubject.clone();
 			
-			// Step 2: Find all this-session commendations
-			highestAchievers.sort( new StudentEntryComparator() );
-			while (idx<highestAchievers.size()) {
-				if (idx<highestAchievers.size() && highestAchievers.get(idx).get(0).equals(highestAchievers.get(idx+1).get(0))) {
-					String id = highestAchievers.get(idx).get(STUDENTID);
+			// Step 2: Add all historical first in subjects
+			sheet = db.getSheetAt(0); // get sheet of all historic first in subject
+			row = sheet.getRow(1);
+			int prevFirstIdx = 1;
+			while (row!=null) {
+				ArrayList<String> tmp = new ArrayList<String>();
+				temp.add(new ArrayList<String>());
+				tmp.add( ""+(int)row.getCell(STUDENTID).getNumericCellValue() );
+				if (sheet.getRow(idx).getCell(1) != null) {
+					tmp.add( row.getCell(1).getStringCellValue() );
+				} else {
+					tmp.add( null );
+				}
+				tmp.add( row.getCell(2).getStringCellValue() );
+				tmp.add( row.getCell(UNITCODE).getStringCellValue() );
+				tmp.add( row.getCell(UNITNAME).getStringCellValue() );
+				firstInSubject.add(tmp);
+				prevFirstIdx++;
+				row = sheet.getRow(prevFirstIdx);
+			}
+			
+			// Step 2: Find all available commendations
+			firstInSubject.sort( new StudentEntryComparator() );
+			while (idx<firstInSubject.size()) {
+				if (idx<firstInSubject.size() && firstInSubject.get(idx).get(0).equals(firstInSubject.get(idx+1).get(0))) {
+					String id = firstInSubject.get(idx).get(STUDENTID);
 					ArrayList<String> commd = new ArrayList<String>();
-					commd.add(highestAchievers.get(idx).get(STUDENTID));
-					commd.add(highestAchievers.get(idx).get(LASTNAME));
-					commd.add(highestAchievers.get(idx).get(FIRSTNAME));
-					String note = highestAchievers.get(idx).get(UNITCODE);
+					commd.add(firstInSubject.get(idx).get(STUDENTID));
+					commd.add(firstInSubject.get(idx).get(LASTNAME));
+					commd.add(firstInSubject.get(idx).get(FIRSTNAME));
+					String note = firstInSubject.get(idx).get(UNITCODE);
 					idx++;
-					while( idx< highestAchievers.size() && id.equals(highestAchievers.get(idx).get(STUDENTID)) ) {
-						note += " - " + highestAchievers.get(idx).get(UNITCODE);
+					while( idx< firstInSubject.size() && id.equals(firstInSubject.get(idx).get(STUDENTID)) ) {
+						note += " - " + firstInSubject.get(idx).get(UNITCODE);
 						idx++;
 					}
 					commd.add(note);
@@ -94,8 +110,6 @@ public class Main {
 					idx++;
 				}
 			}
-			
-			System.out.println("----------------------");
 			
 			// Step 2: Filter out previously commended
 			ArrayList<String> prevCommd = new ArrayList<String>();
@@ -109,22 +123,74 @@ public class Main {
 				row = sheet.getRow(prevCommdIdx);
 			}
 			
-			System.out.println(prevCommd);
-			
-			printList(commendations);
-			
 			// filter our prev commended
 			for(int i=0; i<commendations.size(); i++) {
-				if ( contain(prevCommd,commendations.get(i).get(STUDENTID)) ) {
-					System.out.println(commendations.get(i).get(FIRSTNAME) + " " + commendations.get(i).get(LASTNAME)+" removed.");
+				if ( prevCommd.contains(commendations.get(i).get(STUDENTID)) ) {
 					commendations.remove(i);
+					i--;
 				}
 			}
 			
-			printList(commendations);
+			// Step 3: Write data to relevant excel workbooks
+			sheet = db.getSheetAt(0);
+			String session = sheet.getRow(prevFirstIdx-1).getCell(6).getStringCellValue();
+			if (session.charAt(1) == '1') { // Session 1
+				session = "S2" + session.substring(2);
+			} else { // Session 2
+				session = "S1 " + ( Integer.parseInt(session.substring(3))+1 );
+			}
 			
 			
-			writeExcel(outputBook);
+			// write commendations to output book
+			sheet = outputBook.createSheet("Commendations");
+			HSSFRow title = sheet.createRow(0);
+			title.createCell(0).setCellValue("StudentID");
+			title.createCell(1).setCellValue("First Name");
+			title.createCell(2).setCellValue("Last Name");
+			title.createCell(3).setCellValue("Notes");
+			
+			idx = 1;
+			for (ArrayList<String> entry: commendations) {
+				row = sheet.createRow(idx);
+				row.createCell(0).setCellValue(entry.get(STUDENTID));
+				row.createCell(1).setCellValue(entry.get(FIRSTNAME));
+				row.createCell(2).setCellValue(entry.get(LASTNAME));
+				row.createCell(3).setCellValue(entry.get(3));
+				idx++;
+			}
+			
+			// write first in subject to database book
+			sheet = db.getSheetAt(0);
+			for (int i=0; i<fisCopy.size(); i++) {
+				row = sheet.createRow(prevFirstIdx);
+				row.createCell(0).setCellValue( Integer.parseInt(fisCopy.get(i).get(STUDENTID)) );
+				row.createCell(1).setCellValue(fisCopy.get(i).get(FIRSTNAME));
+				row.createCell(2).setCellValue(fisCopy.get(i).get(LASTNAME));
+				row.createCell(3).setCellValue(fisCopy.get(i).get(UNITCODE));
+				row.createCell(4).setCellValue(fisCopy.get(i).get(UNITNAME));
+				row.createCell(5).setCellValue(mark.get(i));
+				row.createCell(6).setCellValue(session);
+				prevFirstIdx++;
+			}
+			
+			// write commendations to database book
+			sheet = db.getSheetAt(1);
+			for (ArrayList<String> entry: commendations) {
+				row = sheet.createRow(prevCommdIdx);
+				row.createCell(0).setCellValue( Integer.parseInt(entry.get(STUDENTID)) );
+				row.createCell(1).setCellValue(entry.get(FIRSTNAME));
+				row.createCell(2).setCellValue(entry.get(LASTNAME));
+				row.createCell(3).setCellValue(session);
+				row.createCell(4).setCellValue(entry.get(3));
+				prevCommdIdx++;
+			}
+			
+			FileOutputStream outputStream = new FileOutputStream("HighAchiever "+session+".xls");
+	        outputBook.write(outputStream);
+	        
+	        FileOutputStream dbStream = new FileOutputStream("HighAchieverDatabase.xls");
+	        db.write(dbStream);
+			
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -145,11 +211,7 @@ public class Main {
 		return wb;
 	}
 	
-	public static void writeExcel(HSSFWorkbook outBook) throws IOException {
-		FileOutputStream outputStream = new FileOutputStream("JavaBooks.xls");
-        outBook.write(outputStream);
-	}
-	
+	// Write the initial workbook
 	public static HSSFWorkbook writeWorkbook(ArrayList<ArrayList<String>> list, ArrayList<Integer> grade) {
 		// Setup workbook
 		HSSFWorkbook retVal = new HSSFWorkbook();
@@ -161,6 +223,7 @@ public class Main {
 		title.createCell(2).setCellValue("Last Name");
 		title.createCell(3).setCellValue("Unit Code");
 		title.createCell(4).setCellValue("Unit Name");
+		title.createCell(5).setCellValue("Mark");
 		// Fill all data rows
 		int idx=1;
 		for (ArrayList<String> studentEntry: list) {
@@ -170,31 +233,28 @@ public class Main {
 			row.createCell(2).setCellValue(studentEntry.get(LASTNAME));
 			row.createCell(3).setCellValue(studentEntry.get(UNITCODE));
 			row.createCell(4).setCellValue(studentEntry.get(UNITNAME));
+			row.createCell(5).setCellValue(grade.get(idx-1));
 			idx++;
 		}
 		return retVal;
 	}
 	
-	public static void addHighestAchievers(ArrayList<ArrayList<String>> target, ArrayList<ArrayList<String>> temp, ArrayList<Integer> grade) {
-		int topScore = grade.get(0);
+	// Add students who achieved first in subject to "target" list. Also populate a "mark" list with students's grades
+	public static void addFirstInSubject(ArrayList<ArrayList<String>> target, ArrayList<Integer> mark, ArrayList<ArrayList<String>> temp, ArrayList<Integer> tempMark) {
+		int topScore = tempMark.get(0);
 		if( temp.size() < 10 ) return;
 		if (topScore < 85) return; 
 		// Add all high-achievers
 		for(int i=0; i<temp.size(); i++) {
 			// Add 1 high achiever data
-			if (grade.get(i) == topScore) {
+			if (tempMark.get(i) == topScore) {
 				target.add(temp.get(i));
+				mark.add(tempMark.get(i));
 			}
 		}
 	}
 	
-	public static boolean contain(ArrayList<String> list, String target) {
-		for (String entry: list) {
-			if (entry.equals(target)) return true;
-		}
-		return false;
-	}
-	
+	// Debugging function
 	private static void printList(ArrayList<ArrayList<String>> list) {
 		System.out.println("-----------------------");
 		for (ArrayList<String> entry: list) {
