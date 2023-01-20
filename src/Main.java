@@ -1,6 +1,10 @@
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -27,33 +31,33 @@ public class Main {
 			
 			// Step 1: Setup
 			HSSFSheet sheet = readExcel1("GeneratedFile.xls", 0);
-			int idx = 1;
+			int idx = 2;
 			HSSFRow row = sheet.getRow(idx);
-			String unitCode = sheet.getRow(idx).getCell(UNITCODE).getStringCellValue();
+			String unitCode = sheet.getRow(idx).getCell(6).getStringCellValue();
 			
 			// Step 1: Generate list of all FirstInSubject
-			while (row != null) {
-				if (sheet.getRow(idx).getCell(UNITCODE).getStringCellValue().equals(unitCode)) {
+			while (row.getCell(1)!=null) {
+				if (sheet.getRow(idx).getCell(6).getStringCellValue().equals(unitCode)) {
 					temp.add(new ArrayList<String>());
-					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(STUDENTID).getStringCellValue() );
-					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(LASTNAME).getStringCellValue() );
+					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(0).getStringCellValue() );
+					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(1).getStringCellValue() );
 					
-					if (sheet.getRow(idx).getCell(FIRSTNAME) != null) {
-						temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(FIRSTNAME).getStringCellValue() );
+					if (sheet.getRow(idx).getCell(2) != null) {
+						temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(2).getStringCellValue() );
 					} else {
 						temp.get(temp.size()-1).add( null );
 					}
 					
-					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(UNITCODE).getStringCellValue() );
-					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(UNITNAME).getStringCellValue() );
-					tempMark.add( (int) Math.round(sheet.getRow(idx).getCell(MARK).getNumericCellValue()) );
+					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(6).getStringCellValue() );
+					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(7).getStringCellValue() );
+					tempMark.add( (int) Math.round(sheet.getRow(idx).getCell(18).getNumericCellValue()) );
 					idx++;
 					row = sheet.getRow(idx);
 				} else {
 					addFirstInSubject(firstInSubject, mark, temp, tempMark);
 					temp.clear();
 					tempMark.clear();
-					unitCode = row.getCell(UNITCODE).getStringCellValue();
+					unitCode = row.getCell(6).getStringCellValue();
 				}
 			}
 			addFirstInSubject(firstInSubject, mark, temp, tempMark);
@@ -152,7 +156,7 @@ public class Main {
 			idx = 1;
 			for (ArrayList<String> entry: commendations) {
 				row = sheet.createRow(idx);
-				row.createCell(0).setCellValue(entry.get(STUDENTID));
+				row.createCell(0).setCellValue( Integer.parseInt(entry.get(STUDENTID)) );
 				row.createCell(1).setCellValue(entry.get(FIRSTNAME));
 				row.createCell(2).setCellValue(entry.get(LASTNAME));
 				row.createCell(3).setCellValue(entry.get(3));
@@ -185,15 +189,75 @@ public class Main {
 				prevCommdIdx++;
 			}
 			
-			FileOutputStream outputStream = new FileOutputStream("HighAchiever "+session+".xls");
+			FileOutputStream outputStream = new FileOutputStream("High Achiever "+session+".xls");
 	        outputBook.write(outputStream);
 	        
 	        FileOutputStream dbStream = new FileOutputStream("HighAchieverDatabase.xls");
 	        db.write(dbStream);
 			
 			
-		} catch (IOException e) {
-			e.printStackTrace();
+		} catch (IOException e) { // IOException Handling
+			try {
+				FileWriter fileWriter = new FileWriter("ERROR.txt");
+			    PrintWriter printWriter = new PrintWriter(fileWriter);
+				FileInputStream inputStream = new FileInputStream("HighAchieverDatabase.xlsx");
+				printWriter.println("FILES IN THE WRONG FORMAT");
+			    printWriter.println("The file \"HighAchieverDatabase\" is in the wrong format. Double check the following:");
+			    printWriter.println("    -  The file \"HighestAchieverDatabase\" is in the .xls format instead of the .xlsx format ");
+			    printWriter.close();
+			} catch (IOException e1) {
+				try {
+					FileWriter fileWriter = new FileWriter("ERROR.txt");
+				    PrintWriter printWriter = new PrintWriter(fileWriter);
+					FileInputStream inputStream = new FileInputStream("GeneratedFile.xlsx");
+					printWriter.println("FILES IN THE WRONG FORMAT");
+				    printWriter.println("The file \"GeneratedFile\" is in the wrong format. Double check the following:");
+				    printWriter.println("    -  The file \"GeneratedFile\" is in the .xls format instead of the .xlsx format ");
+				    printWriter.close();
+				} catch (IOException e2) {
+					try {
+						FileWriter fileWriter = new FileWriter("ERROR.txt");
+					    PrintWriter printWriter = new PrintWriter(fileWriter);
+					    printWriter.println("FILES CANNOT BE FOUND");
+					    printWriter.println("An error occurred while trying to access excel files. Double check the following:");
+					    printWriter.println("    -  Both files are renamed correctly as \"GeneratedFile\" and \"HighestAchieverDatabase\" ");
+					    printWriter.println("    -  And you are not currently accessing any relevant Excel files");
+					    printWriter.close();
+					    e.printStackTrace();
+					} catch (IOException e3) {
+						System.exit(1);
+					}
+				}
+			}
+		} catch (NullPointerException e) { // Blank cell exception
+			try {
+				FileWriter fileWriter = new FileWriter("ERROR.txt");
+			    PrintWriter printWriter = new PrintWriter(fileWriter);
+			    printWriter.println("BLANK CELL DETECTED");
+			    printWriter.println("A blank cell has been detected in the Excel files. Double check the following:");
+			    printWriter.println("    -  No Cell in vital columns e.g Student ID, Unit Code, Mark are left as blank");
+			    printWriter.println("    -  Check both GeneratedFile.xls and HighAchieverDatabase.xls");
+			    printWriter.close();
+			    e.printStackTrace();
+			} catch (IOException e1) {
+				System.exit(1);
+			}
+		} catch (Exception e) { // Unforeseen exception
+			try {
+			    FileWriter fileWriter = new FileWriter("ERROR.txt");
+			    PrintWriter printWriter = new PrintWriter(fileWriter);
+			    printWriter.println("UNEXPECTED ERROR");
+			    printWriter.println("An unexpected error has occurred. Daniel did not have enough foresight to see this one coming.");
+			    printWriter.println("At this point, you should call Daniel in and let him deal with his own mistake.");
+			    printWriter.println("Alternatively, you can call in another computer science student and let them deal with Daniel's mess :)");
+			    printWriter.println("Below is complete garbage that's meant for Daniel to look at. Daniel (or unfortunate computer science student), if you reading this, goodluck.");
+			    printWriter.println("----------------------------------------------------------------------------------------------------------------------------------------------");
+			    e.printStackTrace(printWriter);
+			    e.printStackTrace();
+			    printWriter.close();
+			} catch (IOException e1) {
+				System.exit(1);
+			}
 		}
 		
 	}
@@ -228,7 +292,7 @@ public class Main {
 		int idx=1;
 		for (ArrayList<String> studentEntry: list) {
 			HSSFRow row = sheet.createRow(idx);
-			row.createCell(0).setCellValue(studentEntry.get(STUDENTID));
+			row.createCell(0).setCellValue( Integer.parseInt(studentEntry.get(STUDENTID)) );
 			row.createCell(1).setCellValue(studentEntry.get(FIRSTNAME));
 			row.createCell(2).setCellValue(studentEntry.get(LASTNAME));
 			row.createCell(3).setCellValue(studentEntry.get(UNITCODE));
