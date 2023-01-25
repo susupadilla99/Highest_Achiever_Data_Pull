@@ -30,34 +30,39 @@ public class Main {
 			ArrayList<Integer> tempMark = new ArrayList<Integer>();
 			
 			// Step 1: Setup
-			HSSFSheet sheet = readExcel1("GeneratedFile.xls", 0);
-			int idx = 2;
-			HSSFRow row = sheet.getRow(idx);
-			String unitCode = sheet.getRow(idx).getCell(6).getStringCellValue();
+			HSSFWorkbook gFile = getWorkbook("GeneratedFile.xls");
+			HSSFWorkbook dbFile = getWorkbook("HighAchieverDatabase.xls");
+			HSSFWorkbook haFile = new HSSFWorkbook();
+			HSSFWorkbook transcriptFile = new HSSFWorkbook();
 			
+			HSSFSheet gSheet = gFile.getSheetAt(0);
+			int gIdx = 2;
+			HSSFRow gRow = gSheet.getRow(gIdx);
+			String unitCode = gSheet.getRow(gIdx).getCell(6).getStringCellValue();
+
 			// Step 1: Generate list of all FirstInSubject
-			while (row.getCell(1)!=null) {
-				if (sheet.getRow(idx).getCell(6).getStringCellValue().equals(unitCode)) {
+			while (gRow.getCell(1)!=null) {
+				if (gSheet.getRow(gIdx).getCell(6).getStringCellValue().equals(unitCode)) {
 					temp.add(new ArrayList<String>());
-					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(0).getStringCellValue() );
-					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(1).getStringCellValue() );
+					temp.get(temp.size()-1).add( gSheet.getRow(gIdx).getCell(0).getStringCellValue() );
+					temp.get(temp.size()-1).add( gSheet.getRow(gIdx).getCell(1).getStringCellValue() );
 					
-					if (sheet.getRow(idx).getCell(2) != null) {
-						temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(2).getStringCellValue() );
+					if (gSheet.getRow(gIdx).getCell(2) != null) {
+						temp.get(temp.size()-1).add( gSheet.getRow(gIdx).getCell(2).getStringCellValue() );
 					} else {
 						temp.get(temp.size()-1).add( null );
 					}
 					
-					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(6).getStringCellValue() );
-					temp.get(temp.size()-1).add( sheet.getRow(idx).getCell(7).getStringCellValue() );
-					tempMark.add( (int) Math.round(sheet.getRow(idx).getCell(18).getNumericCellValue()) );
-					idx++;
-					row = sheet.getRow(idx);
+					temp.get(temp.size()-1).add( gSheet.getRow(gIdx).getCell(6).getStringCellValue() );
+					temp.get(temp.size()-1).add( gSheet.getRow(gIdx).getCell(7).getStringCellValue() );
+					tempMark.add( (int) Math.round(gSheet.getRow(gIdx).getCell(18).getNumericCellValue()) );
+					gIdx++;
+					gRow = gSheet.getRow(gIdx);
 				} else {
 					addFirstInSubject(firstInSubject, mark, temp, tempMark);
 					temp.clear();
 					tempMark.clear();
-					unitCode = row.getCell(6).getStringCellValue();
+					unitCode = gRow.getCell(6).getStringCellValue();
 				}
 			}
 			addFirstInSubject(firstInSubject, mark, temp, tempMark);
@@ -262,17 +267,23 @@ public class Main {
 		
 	}
 	
-	public static HSSFSheet readExcel1(String path, int sheetIdx) throws IOException {
-		FileInputStream inputStream = new FileInputStream(path);
-		HSSFWorkbook wb = new HSSFWorkbook(inputStream);
-		HSSFSheet sheet = wb.getSheetAt(sheetIdx);
-		return sheet;
-	}
+//	public static HSSFSheet readExcel1(String path, int sheetIdx) throws IOException {
+//		FileInputStream inputStream = new FileInputStream(path);
+//		HSSFWorkbook wb = new HSSFWorkbook(inputStream);
+//		HSSFSheet sheet = wb.getSheetAt(sheetIdx);
+//		return sheet;
+//	}
+//	
+//	public static HSSFWorkbook readExcel2(String path) throws IOException {
+//		FileInputStream inputStream = new FileInputStream(path);
+//		HSSFWorkbook wb = new HSSFWorkbook(inputStream);
+//		return wb;
+//	}
 	
-	public static HSSFWorkbook readExcel2(String path) throws IOException {
+	public static HSSFWorkbook getWorkbook(String path) throws IOException {
 		FileInputStream inputStream = new FileInputStream(path);
-		HSSFWorkbook wb = new HSSFWorkbook(inputStream);
-		return wb;
+		HSSFWorkbook workbook = new HSSFWorkbook(inputStream);
+		return workbook;
 	}
 	
 	// Write the initial workbook
