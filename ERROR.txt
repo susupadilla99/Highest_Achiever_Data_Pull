@@ -1,0 +1,4 @@
+BLANK CELL DETECTED
+A blank cell has been detected in the Excel files. Double check the following:
+    -  No Cell in vital columns e.g Student ID, Unit Code, Mark are left as blank
+    -  Check both GeneratedFile.xls and HighAchieverDatabase.xls

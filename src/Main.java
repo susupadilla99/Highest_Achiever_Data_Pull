@@ -97,18 +97,17 @@ public class Main {
 			HSSFRow dbRow = dbSheet.getRow(1);
 			int prevFirstIdx = 1;
 			while (dbRow!=null) {
-				ArrayList<String> tmp = new ArrayList<String>();
-				temp.add(new ArrayList<String>());
-				tmp.add( ""+(int)row.getCell(STUDENTID).getNumericCellValue() );
+				ArrayList<String> studentEntry = new ArrayList<String>();
+				studentEntry.add( ""+(int)row.getCell(STUDENTID).getNumericCellValue() );
 				if (sheet.getRow(idx).getCell(1) != null) {
-					tmp.add( row.getCell(1).getStringCellValue() );
+					studentEntry.add( row.getCell(1).getStringCellValue() );
 				} else {
-					tmp.add( null );
+					studentEntry.add( null );
 				}
-				tmp.add( row.getCell(2).getStringCellValue() );
-				tmp.add( row.getCell(UNITCODE).getStringCellValue() );
-				tmp.add( row.getCell(UNITNAME).getStringCellValue() );
-				firstInSubject.add(tmp);
+				studentEntry.add( row.getCell(2).getStringCellValue() );
+				studentEntry.add( row.getCell(UNITCODE).getStringCellValue() );
+				studentEntry.add( row.getCell(UNITNAME).getStringCellValue() );
+				firstInSubject.add(studentEntry);
 				prevFirstIdx++;
 				row = sheet.getRow(prevFirstIdx);
 			}
