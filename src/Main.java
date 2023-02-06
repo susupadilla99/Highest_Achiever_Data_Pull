@@ -31,32 +31,41 @@ public class Main {
 	static ArrayList<Integer> mark = new ArrayList<Integer>();
 	static int year = 0;
 	static String session = "";
+	static String currentSession = "";
 	
 	
 	public static void main(String[] args) {
 		try {
-			// Step 1: Setup
+			
+			/** Step 1: Find all this-session first in subject students**/
+			
+			// setup
 			HSSFWorkbook gFile = getWorkbook("GeneratedFile.xls");
 			HSSFWorkbook dbFile = getWorkbook("HighAchieverDatabase.xls");
 			HSSFWorkbook haFile = new HSSFWorkbook();
-			HSSFWorkbook transcriptFile = new HSSFWorkbook();			
-			
+			HSSFWorkbook transcriptFISFile = new HSSFWorkbook();
+			HSSFWorkbook transcriptCommdFile = new HSSFWorkbook();
 			HSSFSheet gSheet = gFile.getSheetAt(0);
 			int gIdx = 2;
 			HSSFRow gRow = gSheet.getRow(gIdx);
 			String unitCode = gSheet.getRow(gIdx).getCell(6).getStringCellValue();
-
-			// Grab some extra details
+			// setup year & session
 			year = (int) Math.round(gRow.getCell(4).getNumericCellValue());
 			session = gRow.getCell(5).getStringCellValue();
+			if (session.charAt(0) == 'F') {
+				currentSession = "S1 "+year;
+			} else if (session.charAt(0) =='S') {
+				currentSession = "S2 "+year;
+			} else {
+				currentSession = "S3 "+year;
+			}
 			
-			// Step 1: Generate list of all FirstInSubject
-			ArrayList<ArrayList<String>> tempEntriesList = new ArrayList<ArrayList<String>>();
-			ArrayList<Integer> tempMarkEntries = new ArrayList<Integer>();
-			
+			// generate array list of all first in subject student
+			ArrayList<ArrayList<String>> eachUnitsStudentList = new ArrayList<ArrayList<String>>();
+			ArrayList<Integer> eachUnitsMarkList = new ArrayList<Integer>();
 			while (gRow.getCell(1)!=null) {
 				if ( gSheet.getRow(gIdx).getCell(6).getStringCellValue().equals(unitCode) ) {
-					//Extract Student Entry
+					// extract student entry
 					ArrayList<String> studentEntry = new ArrayList<String>();
 					studentEntry.add( gRow.getCell(0).getStringCellValue() ); // Student ID
 					// extra precaution cause First Name is nullable
@@ -65,156 +74,226 @@ public class Main {
 					studentEntry.add( gRow.getCell(1).getStringCellValue() ); // Student Last Name
 					studentEntry.add( gRow.getCell(6).getStringCellValue() ); // Unit Code
 					studentEntry.add( gRow.getCell(7).getStringCellValue() ); // Unit Name
-					tempMarkEntries.add( (int) Math.round(gRow.getCell(18).getNumericCellValue()) ); // Mark
+					eachUnitsMarkList.add( (int) Math.round(gRow.getCell(18).getNumericCellValue()) ); // Mark
 					studentEntry.add( gRow.getCell(13).getStringCellValue() ); // Course Code
 					studentEntry.add( "" + (int) Math.round(gRow.getCell(15).getNumericCellValue()) ); // Course Version
 					studentEntry.add( "" + (int) Math.round(gRow.getCell(16).getNumericCellValue()) ); // Course Attempt
-					//Add Student Entry to Temporary List
-					tempEntriesList.add(studentEntry);
+					//add Student Entry to each-unit list
+					eachUnitsStudentList.add(studentEntry);
 					gIdx++;
 					gRow = gSheet.getRow(gIdx);
 				} else {
-					addFirstInSubject(firstInSubject, mark, tempEntriesList, tempMarkEntries);
-					tempEntriesList.clear();
-					tempMarkEntries.clear();
+					addFirstInSubject(firstInSubject, mark, eachUnitsStudentList, eachUnitsMarkList);
+					eachUnitsStudentList.clear();
+					eachUnitsMarkList.clear();
 					unitCode = gRow.getCell(6).getStringCellValue();
 				}
 			}
-			addFirstInSubject(firstInSubject, mark, tempEntriesList, tempMarkEntries);
-			
-			// Step 1: Write FirstInSubject to output Excel Workbook
+			addFirstInSubject(firstInSubject, mark, eachUnitsStudentList, eachUnitsMarkList);
+	
+			// write FirstInSubject to output Excel Workbook
 			writeFIS(haFile, firstInSubject, mark);
 			
+			/** Step 2: Find all historical first in subject student from database & put them in array list **/
 			
-			// Step 2: Setup
-			int dbIdx = 0;
-			
+			// setup
 			@SuppressWarnings("unchecked")
 			ArrayList<ArrayList<String>> fisCopy = (ArrayList<ArrayList<String>>) firstInSubject.clone();
-			
-			// Step 2: Add all historical first in subjects
 			HSSFSheet dbSheet = dbFile.getSheetAt(0); // get sheet of all historic first in subject
 			HSSFRow dbRow = dbSheet.getRow(1);
-			int prevFirstIdx = 1;
+			int dbIdx = 1;
+			// generate list of all historical first in subject students
 			while (dbRow!=null) {
 				ArrayList<String> studentEntry = new ArrayList<String>();
-				studentEntry.add( ""+(int)row.getCell(STUDENTID).getNumericCellValue() );
-				if (sheet.getRow(idx).getCell(1) != null) {
-					studentEntry.add( row.getCell(1).getStringCellValue() );
-				} else {
-					studentEntry.add( null );
-				}
-				studentEntry.add( row.getCell(2).getStringCellValue() );
-				studentEntry.add( row.getCell(UNITCODE).getStringCellValue() );
-				studentEntry.add( row.getCell(UNITNAME).getStringCellValue() );
+				studentEntry.add( ""+(int)dbRow.getCell(0).getNumericCellValue() ); // Student ID
+				// extra precaution because first name is nullable
+				String stdFirstName = dbRow.getCell(1)==null?"":gRow.getCell(1).getStringCellValue();
+				studentEntry.add( stdFirstName ); // Student First Name
+				studentEntry.add( dbRow.getCell(2).getStringCellValue() ); // Student Last Name
+				studentEntry.add( dbRow.getCell(3).getStringCellValue() ); // Unit Code
+				studentEntry.add( dbRow.getCell(4).getStringCellValue() ); // Unit Name
+				mark.add( (int)Math.round(dbRow.getCell(5).getNumericCellValue()) ); // Mark
+				studentEntry.add( gRow.getCell(13).getStringCellValue() ); // Course Code
+				studentEntry.add( "" + (int) Math.round(gRow.getCell(15).getNumericCellValue()) ); // Course Version
+				studentEntry.add( "" + (int) Math.round(gRow.getCell(16).getNumericCellValue()) ); // Course Attempt
+				// add student entry to first in subject list
 				firstInSubject.add(studentEntry);
-				prevFirstIdx++;
-				row = sheet.getRow(prevFirstIdx);
+				dbIdx++;
+				dbRow = dbSheet.getRow(dbIdx);
 			}
-//			
-//			// Step 2: Find all available commendations
-//			firstInSubject.sort( new StudentEntryComparator() );
-//			while (idx<firstInSubject.size()) {
-//				if (idx<firstInSubject.size() && firstInSubject.get(idx).get(0).equals(firstInSubject.get(idx+1).get(0))) {
-//					String id = firstInSubject.get(idx).get(STUDENTID);
-//					ArrayList<String> commd = new ArrayList<String>();
-//					commd.add(firstInSubject.get(idx).get(STUDENTID));
-//					commd.add(firstInSubject.get(idx).get(LASTNAME));
-//					commd.add(firstInSubject.get(idx).get(FIRSTNAME));
-//					String note = firstInSubject.get(idx).get(UNITCODE);
-//					idx++;
-//					while( idx< firstInSubject.size() && id.equals(firstInSubject.get(idx).get(STUDENTID)) ) {
-//						note += " - " + firstInSubject.get(idx).get(UNITCODE);
-//						idx++;
-//					}
-//					commd.add(note);
-//					commendations.add( commd );
-//				} else {
-//					idx++;
-//				}
-//			}
-//			
-//			// Step 2: Filter out previously commended
-//			ArrayList<String> prevCommd = new ArrayList<String>();
-//			sheet = db.getSheetAt(1); // get sheet of all historic commended
-//			row = sheet.getRow(1);
-//			int prevCommdIdx = 1;
-//			// generate list of prev commended
-//			while(row != null) {
-//				prevCommd.add( ""+ (int) row.getCell(STUDENTID).getNumericCellValue() );
-//				prevCommdIdx++;
-//				row = sheet.getRow(prevCommdIdx);
-//			}
-//			
-//			// filter our prev commended
-//			for(int i=0; i<commendations.size(); i++) {
-//				if ( prevCommd.contains(commendations.get(i).get(STUDENTID)) ) {
-//					commendations.remove(i);
-//					i--;
-//				}
-//			}
-//			
-//			// Step 3: Write data to relevant excel workbooks
-//			sheet = db.getSheetAt(0);
-//			String session = sheet.getRow(prevFirstIdx-1).getCell(6).getStringCellValue();
-//			if (session.charAt(1) == '1') { // Session 1
-//				session = "S2" + session.substring(2);
-//			} else { // Session 2
-//				session = "S1 " + ( Integer.parseInt(session.substring(3))+1 );
-//			}
-//			
-//			
-//			// write commendations to output book
-//			sheet = outputBook.createSheet("Commendations");
-//			HSSFRow title = sheet.createRow(0);
-//			title.createCell(0).setCellValue("StudentID");
-//			title.createCell(1).setCellValue("First Name");
-//			title.createCell(2).setCellValue("Last Name");
-//			title.createCell(3).setCellValue("Notes");
-//			
-//			idx = 1;
-//			for (ArrayList<String> entry: commendations) {
-//				row = sheet.createRow(idx);
-//				row.createCell(0).setCellValue( Integer.parseInt(entry.get(STUDENTID)) );
-//				row.createCell(1).setCellValue(entry.get(FIRSTNAME));
-//				row.createCell(2).setCellValue(entry.get(LASTNAME));
-//				row.createCell(3).setCellValue(entry.get(3));
-//				idx++;
-//			}
-//			
-//			// write first in subject to database book
-//			sheet = db.getSheetAt(0);
-//			for (int i=0; i<fisCopy.size(); i++) {
-//				row = sheet.createRow(prevFirstIdx);
-//				row.createCell(0).setCellValue( Integer.parseInt(fisCopy.get(i).get(STUDENTID)) );
-//				row.createCell(1).setCellValue(fisCopy.get(i).get(FIRSTNAME));
-//				row.createCell(2).setCellValue(fisCopy.get(i).get(LASTNAME));
-//				row.createCell(3).setCellValue(fisCopy.get(i).get(UNITCODE));
-//				row.createCell(4).setCellValue(fisCopy.get(i).get(UNITNAME));
-//				row.createCell(5).setCellValue(mark.get(i));
-//				row.createCell(6).setCellValue(session);
-//				prevFirstIdx++;
-//			}
-//			
-//			// write commendations to database book
-//			sheet = db.getSheetAt(1);
-//			for (ArrayList<String> entry: commendations) {
-//				row = sheet.createRow(prevCommdIdx);
-//				row.createCell(0).setCellValue( Integer.parseInt(entry.get(STUDENTID)) );
-//				row.createCell(1).setCellValue(entry.get(FIRSTNAME));
-//				row.createCell(2).setCellValue(entry.get(LASTNAME));
-//				row.createCell(3).setCellValue(session);
-//				row.createCell(4).setCellValue(entry.get(3));
-//				prevCommdIdx++;
-//			}
-//			
-//			FileOutputStream outputStream = new FileOutputStream("High Achiever "+session+".xls");
-//	        outputBook.write(outputStream);
-//	        
-//	        FileOutputStream dbStream = new FileOutputStream("HighAchieverDatabase.xls");
-//	        db.write(dbStream);
-//			
-//			
+			
+			/** Step 3: Find all available commendations using the array list of ALL first in subject **/
+			
+			// sort first in subject list using student ID
+			firstInSubject.sort( new StudentEntryComparator() );
+			int idx = 0;
+			while (idx<firstInSubject.size()) {
+				// idx is valid & there are 2 consecutive first in subject entry
+				if (idx<(firstInSubject.size()-1) && firstInSubject.get(idx).get(0).equals(firstInSubject.get(idx+1).get(0))) {
+					String id = firstInSubject.get(idx).get(STUDENTID);
+					ArrayList<String> commendationEntry = new ArrayList<String>();
+					commendationEntry.add(firstInSubject.get(idx).get(STUDENTID)); // Student ID
+					commendationEntry.add(firstInSubject.get(idx).get(FIRSTNAME)); // Student First Name
+					commendationEntry.add(firstInSubject.get(idx).get(LASTNAME)); // Student Last Name
+					String note = firstInSubject.get(idx).get(UNITCODE);
+					idx++;
+					// record all FIS units for this 1 student ID
+					while( idx< firstInSubject.size() && id.equals(firstInSubject.get(idx).get(STUDENTID)) ) {
+						note += " - " + firstInSubject.get(idx).get(UNITCODE);
+						idx++;
+					}
+					commendationEntry.add(note); // Notes on units & mark of FIS
+					commendationEntry.add(firstInSubject.get(idx).get(COURSECODE));
+					commendationEntry.add(firstInSubject.get(idx).get(COURSEVERSION));
+					commendationEntry.add(firstInSubject.get(idx).get(COURSEATTEMPT));
+					commendations.add( commendationEntry );
+				} else {
+					idx++;
+				}
+			}
+
+			/** Step 4: Filter out students who have been previously commended **/
+			
+			// setup
+			ArrayList<String> prevCommd = new ArrayList<String>();
+			HSSFSheet pcSheet = dbFile.getSheetAt(1); // get sheet of all historic commended
+			HSSFRow pcRow = pcSheet.getRow(1);
+			int pcIdx = 1;
+			
+			// generate list of previous commended student ID
+			while(pcRow != null) {
+				prevCommd.add( ""+ (int) pcRow.getCell(STUDENTID).getNumericCellValue() );
+				pcIdx++;
+				pcRow = pcSheet.getRow(pcIdx);
+			}
+			
+			// filter our prev commended
+			for(int i=0; i<commendations.size(); i++) {
+				if ( prevCommd.contains(commendations.get(i).get(STUDENTID)) ) {
+					commendations.remove(i);
+					i--;
+				}
+			}
+
+			/**	Step 5: Write data to relevant excel workbooks **/
+			
+			// write commendations to high achiever book
+			HSSFSheet haSheet = haFile.createSheet("Commendations");
+			HSSFRow title = haSheet.createRow(0);
+			title.createCell(0).setCellValue("StudentID");
+			title.createCell(1).setCellValue("First Name");
+			title.createCell(2).setCellValue("Last Name");
+			title.createCell(3).setCellValue("Notes");
+			title.createCell(4).setCellValue("Session");
+			
+			int haIdx = 1;
+			for (ArrayList<String> entry: commendations) {
+				HSSFRow haRow = haSheet.createRow(haIdx);
+				haRow.createCell(0).setCellValue( Integer.parseInt(entry.get(0)) );
+				haRow.createCell(1).setCellValue(entry.get(1));
+				haRow.createCell(2).setCellValue(entry.get(2));
+				haRow.createCell(3).setCellValue(entry.get(3));
+				haRow.createCell(4).setCellValue(currentSession);
+				haIdx++;
+			}
+			
+			// write first in subject to database book
+			dbSheet = dbFile.getSheetAt(0);
+			for (int i=0; i<fisCopy.size(); i++) {
+				dbRow = dbSheet.createRow(dbIdx);
+				dbRow.createCell(0).setCellValue( Integer.parseInt(fisCopy.get(i).get(STUDENTID)) );
+				dbRow.createCell(1).setCellValue(fisCopy.get(i).get(FIRSTNAME));
+				dbRow.createCell(2).setCellValue(fisCopy.get(i).get(LASTNAME));
+				dbRow.createCell(3).setCellValue(fisCopy.get(i).get(UNITCODE));
+				dbRow.createCell(4).setCellValue(fisCopy.get(i).get(UNITNAME));
+				dbRow.createCell(5).setCellValue(mark.get(i));
+				dbRow.createCell(6).setCellValue(fisCopy.get(i).get(COURSECODE));
+				dbRow.createCell(7).setCellValue(fisCopy.get(i).get(COURSEVERSION));
+				dbRow.createCell(8).setCellValue(fisCopy.get(i).get(COURSEATTEMPT));
+				dbIdx++;
+			}
+			
+			// write commendations to database book
+			pcSheet = dbFile.getSheetAt(1);
+			for (ArrayList<String> entry: commendations) {
+				pcRow = pcSheet.createRow(pcIdx);
+				pcRow.createCell(0).setCellValue( Integer.parseInt(entry.get(0)) ); // Student ID
+				pcRow.createCell(1).setCellValue(entry.get(1)); // Student First Name
+				pcRow.createCell(2).setCellValue(entry.get(2)); // Student Last Name
+				pcRow.createCell(3).setCellValue(entry.get(3)); // Notes
+				pcRow.createCell(4).setCellValue(currentSession); // Session
+				pcRow.createCell(5).setCellValue(entry.get(4)); // Course Code
+				pcRow.createCell(6).setCellValue(entry.get(5)); // Course Version
+				pcRow.createCell(7).setCellValue(entry.get(6)); // Course Attempt
+				pcIdx++;
+			}
+			
+			// write to fis transcript file
+			HSSFSheet fisSheet = transcriptFISFile.createSheet("in");
+			title = fisSheet.createRow(0);
+			title.createCell(0).setCellValue("stu_id");
+			title.createCell(1).setCellValue("seq_no");
+			title.createCell(2).setCellValue("cmt_cd");
+			title.createCell(3).setCellValue("stu_cmt_effct_dt");
+			title.createCell(4).setCellValue("stu_cmt_txt_1");
+			title.createCell(4).setCellValue("spk_cd");
+			title.createCell(4).setCellValue("spk_ver_no");
+			title.createCell(4).setCellValue("ssp_att_no");
+			title.createCell(4).setCellValue("avail_yr");
+			title.createCell(4).setCellValue("sprd_cd");
+			
+			int fisIdx = 1;
+			for (ArrayList<String> entry: fisCopy) {
+				HSSFRow fisRow = fisSheet.createRow(fisIdx);
+				fisRow.createCell(0).setCellValue( Integer.parseInt(entry.get(STUDENTID)) );
+				fisRow.createCell(2).setCellValue( FISCOMMENT );
+				fisRow.createCell(4).setCellValue( entry.get(UNITCODE) );
+				fisRow.createCell(5).setCellValue( entry.get(COURSECODE) );
+				fisRow.createCell(6).setCellValue( entry.get(COURSEVERSION) );
+				fisRow.createCell(7).setCellValue( entry.get(COURSEATTEMPT) );
+				fisRow.createCell(8).setCellValue( year );
+				fisRow.createCell(9).setCellValue( session );
+			}
+			
+			// write to commendation transcript file
+			HSSFSheet commdSheet = transcriptCommdFile.createSheet("in");
+			title = commdSheet.createRow(0);
+			title.createCell(0).setCellValue("stu_id");
+			title.createCell(1).setCellValue("seq_no");
+			title.createCell(2).setCellValue("cmt_cd");
+			title.createCell(3).setCellValue("stu_cmt_effct_dt");
+			title.createCell(4).setCellValue("stu_cmt_txt_1");
+			title.createCell(4).setCellValue("spk_cd");
+			title.createCell(4).setCellValue("spk_ver_no");
+			title.createCell(4).setCellValue("ssp_att_no");
+			title.createCell(4).setCellValue("avail_yr");
+			title.createCell(4).setCellValue("sprd_cd");
+			
+			int commdIdx = 1;
+			for (ArrayList<String> entry: commendations) {
+				HSSFRow commdRow = commdSheet.createRow(commdIdx);
+				commdRow.createCell(0).setCellValue( Integer.parseInt(entry.get(0)) );
+				commdRow.createCell(2).setCellValue( COMMDCOMMENT );
+				commdRow.createCell(5).setCellValue( entry.get(4) );
+				commdRow.createCell(6).setCellValue( entry.get(5) );
+				commdRow.createCell(7).setCellValue( entry.get(6) );
+				commdRow.createCell(8).setCellValue( year );
+				commdRow.createCell(9).setCellValue( session );
+			}
+			
+			
+			FileOutputStream haStream = new FileOutputStream("High Achiever "+currentSession+".xls");
+	        haFile.write(haStream);
+	        
+	        FileOutputStream dbStream = new FileOutputStream("HighAchieverDatabase.xls");
+	        dbFile.write(dbStream);
+			
+	        FileOutputStream fisStream = new FileOutputStream("First in Subject Transcript Upload.xls");
+	        transcriptFISFile.write(fisStream);
+
+	        FileOutputStream commdStream = new FileOutputStream("Commendation Transcript Upload.xls");
+	        transcriptCommdFile.write(commdStream);
+			
 		} catch (IOException e) { // IOException Handling
 			try {
 				FileWriter fileWriter = new FileWriter("ERROR.txt");
@@ -304,12 +383,6 @@ public class Main {
 	public static void writeFIS(HSSFWorkbook book, ArrayList<ArrayList<String>> list, ArrayList<Integer> grade) {
 		// Setup workbook
 		HSSFSheet sheet = book.createSheet("First in Subject");
-		String currentSession = "";
-		if (session.charAt(0) == 'F') {
-			currentSession = "S1 "+year;
-		} else if (session.charAt(0) =='S') {
-			currentSession = "S2 "+year;
-		}
 		// Create Title row
 		HSSFRow title = sheet.createRow(0);
 		title.createCell(0).setCellValue("Student ID");
