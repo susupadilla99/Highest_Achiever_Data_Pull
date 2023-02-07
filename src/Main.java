@@ -16,10 +16,9 @@ public class Main {
 	static final int LASTNAME = 2;
 	static final int UNITCODE = 3;
 	static final int UNITNAME = 4;
-	static final int MARK = 5;
-	static final int COURSECODE = 6;
+	static final int COURSECODE = 5;
 	static final int COURSEVERSION = 6;
-	static final int COURSEATTEMPT = 6;
+	static final int COURSEATTEMPT = 7;
 	
 	static final String FISCOMMENT = "FSEHIGHACH";
 	static final String COMMDCOMMENT = "FSECOMM";
@@ -195,6 +194,8 @@ public class Main {
 				haIdx++;
 			}
 			
+			printList(fisCopy);
+			
 			// write first in subject to database book
 			dbSheet = dbFile.getSheetAt(0);
 			for (int i=0; i<fisCopy.size(); i++) {
@@ -211,6 +212,8 @@ public class Main {
 				dbRow.createCell(9).setCellValue(fisCopy.get(i).get(COURSEATTEMPT));
 				dbIdx++;
 			}
+			
+			printList(commendations);
 			
 			// write commendations to database book
 			pcSheet = dbFile.getSheetAt(1);
@@ -235,11 +238,11 @@ public class Main {
 			title.createCell(2).setCellValue("cmt_cd");
 			title.createCell(3).setCellValue("stu_cmt_effct_dt");
 			title.createCell(4).setCellValue("stu_cmt_txt_1");
-			title.createCell(4).setCellValue("spk_cd");
-			title.createCell(4).setCellValue("spk_ver_no");
-			title.createCell(4).setCellValue("ssp_att_no");
-			title.createCell(4).setCellValue("avail_yr");
-			title.createCell(4).setCellValue("sprd_cd");
+			title.createCell(5).setCellValue("spk_cd");
+			title.createCell(6).setCellValue("spk_ver_no");
+			title.createCell(7).setCellValue("ssp_att_no");
+			title.createCell(8).setCellValue("avail_yr");
+			title.createCell(9).setCellValue("sprd_cd");
 			
 			int fisIdx = 1;
 			for (ArrayList<String> entry: fisCopy) {
@@ -263,11 +266,11 @@ public class Main {
 			title.createCell(2).setCellValue("cmt_cd");
 			title.createCell(3).setCellValue("stu_cmt_effct_dt");
 			title.createCell(4).setCellValue("stu_cmt_txt_1");
-			title.createCell(4).setCellValue("spk_cd");
-			title.createCell(4).setCellValue("spk_ver_no");
-			title.createCell(4).setCellValue("ssp_att_no");
-			title.createCell(4).setCellValue("avail_yr");
-			title.createCell(4).setCellValue("sprd_cd");
+			title.createCell(5).setCellValue("spk_cd");
+			title.createCell(6).setCellValue("spk_ver_no");
+			title.createCell(7).setCellValue("ssp_att_no");
+			title.createCell(8).setCellValue("avail_yr");
+			title.createCell(9).setCellValue("sprd_cd");
 			
 			int commdIdx = 1;
 			for (ArrayList<String> entry: commendations) {
