@@ -205,9 +205,10 @@ public class Main {
 				dbRow.createCell(3).setCellValue(fisCopy.get(i).get(UNITCODE));
 				dbRow.createCell(4).setCellValue(fisCopy.get(i).get(UNITNAME));
 				dbRow.createCell(5).setCellValue(mark.get(i));
-				dbRow.createCell(6).setCellValue(fisCopy.get(i).get(COURSECODE));
-				dbRow.createCell(7).setCellValue(fisCopy.get(i).get(COURSEVERSION));
-				dbRow.createCell(8).setCellValue(fisCopy.get(i).get(COURSEATTEMPT));
+				dbRow.createCell(6).setCellValue(currentSession);
+				dbRow.createCell(7).setCellValue(fisCopy.get(i).get(COURSECODE));
+				dbRow.createCell(8).setCellValue(fisCopy.get(i).get(COURSEVERSION));
+				dbRow.createCell(9).setCellValue(fisCopy.get(i).get(COURSEATTEMPT));
 				dbIdx++;
 			}
 			
@@ -251,6 +252,7 @@ public class Main {
 				fisRow.createCell(7).setCellValue( entry.get(COURSEATTEMPT) );
 				fisRow.createCell(8).setCellValue( year );
 				fisRow.createCell(9).setCellValue( session );
+				fisIdx++;
 			}
 			
 			// write to commendation transcript file
@@ -277,6 +279,7 @@ public class Main {
 				commdRow.createCell(7).setCellValue( entry.get(6) );
 				commdRow.createCell(8).setCellValue( year );
 				commdRow.createCell(9).setCellValue( session );
+				commdIdx++;
 			}
 			
 			
@@ -397,6 +400,7 @@ public class Main {
 		title.createCell(4).setCellValue("Unit Name");
 		title.createCell(5).setCellValue("Mark");
 		title.createCell(6).setCellValue("Session");
+		
 		// Fill all data rows
 		int idx=1;
 		for (ArrayList<String> studentEntry: list) {
