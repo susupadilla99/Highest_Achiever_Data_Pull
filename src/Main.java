@@ -1,5 +1,3 @@
-import java.io.BufferedOutputStream;
-import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -293,6 +291,11 @@ public class Main {
 
 	        FileOutputStream commdStream = new FileOutputStream("Commendation Transcript Upload.xls");
 	        transcriptCommdFile.write(commdStream);
+	        
+	        haFile.close();
+	        dbFile.close();
+	        transcriptFISFile.close();
+	        transcriptCommdFile.close();
 			
 		} catch (IOException e) { // IOException Handling
 			try {
@@ -303,6 +306,7 @@ public class Main {
 			    printWriter.println("The file \"HighAchieverDatabase\" is in the wrong format. Double check the following:");
 			    printWriter.println("    -  The file \"HighestAchieverDatabase\" is in the .xls format instead of the .xlsx format ");
 			    printWriter.close();
+			    inputStream.close();
 			} catch (IOException e1) {
 				try {
 					FileWriter fileWriter = new FileWriter("ERROR.txt");
@@ -312,6 +316,7 @@ public class Main {
 				    printWriter.println("The file \"GeneratedFile\" is in the wrong format. Double check the following:");
 				    printWriter.println("    -  The file \"GeneratedFile\" is in the .xls format instead of the .xlsx format ");
 				    printWriter.close();
+				    inputStream.close();
 				} catch (IOException e2) {
 					try {
 						FileWriter fileWriter = new FileWriter("ERROR.txt");
