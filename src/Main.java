@@ -23,12 +23,13 @@ public class Main {
 	static final String FISCOMMENT = "FSEHIGHACH";
 	static final String COMMDCOMMENT = "FSECOMM";
 
-	static ArrayList<ArrayList<String>> firstInSubject = new ArrayList<ArrayList<String>>();
+	static ArrayList<StudentEntry> firstInSubject = new ArrayList<StudentEntry>();
 	static ArrayList<ArrayList<String>> commendations = new ArrayList<ArrayList<String>>();
 	static ArrayList<Integer> mark = new ArrayList<Integer>();
 	static int year = 0;
 	static String session = "";
 	static String currentSession = "";
+	static int enrolmentReq = 0; // How many enrollments does an unit need to qualify for FIS
 	
 	
 	public static void main(String[] args) {
@@ -36,58 +37,28 @@ public class Main {
 			
 			/** Step 1: Find all this-session first in subject students**/
 			
-			// setup
+			// Setup Files
 			HSSFWorkbook gFile = getWorkbook("GeneratedFile.xls");
 			HSSFWorkbook dbFile = getWorkbook("HighAchieverDatabase.xls");
 			HSSFWorkbook haFile = new HSSFWorkbook();
 			HSSFWorkbook transcriptFISFile = new HSSFWorkbook();
 			HSSFWorkbook transcriptCommdFile = new HSSFWorkbook();
-			HSSFSheet gSheet = gFile.getSheetAt(0);
-			int gIdx = 2;
-			HSSFRow gRow = gSheet.getRow(gIdx);
-			String unitCode = gSheet.getRow(gIdx).getCell(6).getStringCellValue();
-			// setup year & session
-			year = (int) Math.round(gRow.getCell(4).getNumericCellValue());
-			session = gRow.getCell(5).getStringCellValue();
-			if (session.charAt(0) == 'F') {
-				currentSession = "S1 "+year;
-			} else if (session.charAt(0) =='S') {
-				currentSession = "S2 "+year;
-			} else {
+			// setup year, session & enrolmentRequirement
+			year = (int) Math.round(gFile.getSheetAt(1).getRow(2).getCell(4).getNumericCellValue());
+			session = gFile.getSheetAt(1).getRow(2).getCell(5).getStringCellValue();
+			if (session.equals("S3")) {
 				currentSession = "S3 "+year;
+				enrolmentReq = 5;
+			} else if (session.charAt(0) =='F') {
+				currentSession = "S1 "+year;
+				enrolmentReq = 10;
+			} else {
+				currentSession = "S2 "+year;
+				enrolmentReq = 10;
 			}
-			
-			// generate array list of all first in subject student
-			ArrayList<ArrayList<String>> eachUnitsStudentList = new ArrayList<ArrayList<String>>();
-			ArrayList<Integer> eachUnitsMarkList = new ArrayList<Integer>();
-			while (gRow.getCell(1)!=null) {
-				if ( gSheet.getRow(gIdx).getCell(6).getStringCellValue().equals(unitCode) ) {
-					// extract student entry
-					ArrayList<String> studentEntry = new ArrayList<String>();
-					studentEntry.add( gRow.getCell(0).getStringCellValue() ); // Student ID
-					// extra precaution cause First Name is nullable
-					String stdFirstName = gRow.getCell(2)==null?"":gRow.getCell(2).getStringCellValue();
-					studentEntry.add( stdFirstName ); // Student First Name
-					studentEntry.add( gRow.getCell(1).getStringCellValue() ); // Student Last Name
-					studentEntry.add( gRow.getCell(6).getStringCellValue() ); // Unit Code
-					studentEntry.add( gRow.getCell(7).getStringCellValue() ); // Unit Name
-					eachUnitsMarkList.add( (int) Math.round(gRow.getCell(18).getNumericCellValue()) ); // Mark
-					studentEntry.add( gRow.getCell(13).getStringCellValue() ); // Course Code
-					studentEntry.add( "" + (int) Math.round(gRow.getCell(15).getNumericCellValue()) ); // Course Version
-					studentEntry.add( "" + (int) Math.round(gRow.getCell(16).getNumericCellValue()) ); // Course Attempt
-					//add Student Entry to each-unit list
-					eachUnitsStudentList.add(studentEntry);
-					gIdx++;
-					gRow = gSheet.getRow(gIdx);
-				} else {
-					addFirstInSubject(firstInSubject, mark, eachUnitsStudentList, eachUnitsMarkList);
-					eachUnitsStudentList.clear();
-					eachUnitsMarkList.clear();
-					unitCode = gRow.getCell(6).getStringCellValue();
-				}
-			}
-			addFirstInSubject(firstInSubject, mark, eachUnitsStudentList, eachUnitsMarkList);
-	
+
+			findFirstInSubject(gFile);
+
 			// write FirstInSubject to output Excel Workbook
 			writeFIS(haFile, firstInSubject, mark);
 			
@@ -104,15 +75,15 @@ public class Main {
 				ArrayList<String> studentEntry = new ArrayList<String>();
 				studentEntry.add( ""+(int)dbRow.getCell(0).getNumericCellValue() ); // Student ID
 				// extra precaution because first name is nullable
-				String stdFirstName = dbRow.getCell(1)==null?"":gRow.getCell(1).getStringCellValue();
+				String stdFirstName = dbRow.getCell(1)==null?"":dbRow.getCell(1).getStringCellValue();
 				studentEntry.add( stdFirstName ); // Student First Name
 				studentEntry.add( dbRow.getCell(2).getStringCellValue() ); // Student Last Name
 				studentEntry.add( dbRow.getCell(3).getStringCellValue() ); // Unit Code
 				studentEntry.add( dbRow.getCell(4).getStringCellValue() ); // Unit Name
 				mark.add( (int)Math.round(dbRow.getCell(5).getNumericCellValue()) ); // Mark
-				studentEntry.add( gRow.getCell(13).getStringCellValue() ); // Course Code
-				studentEntry.add( "" + (int) Math.round(gRow.getCell(15).getNumericCellValue()) ); // Course Version
-				studentEntry.add( "" + (int) Math.round(gRow.getCell(16).getNumericCellValue()) ); // Course Attempt
+				studentEntry.add( dbRow.getCell(7).getStringCellValue() ); // Course Code
+				studentEntry.add( "" + (int) Math.round(dbRow.getCell(8).getNumericCellValue()) ); // Course Version
+				studentEntry.add( "" + (int) Math.round(dbRow.getCell(9).getNumericCellValue()) ); // Course Attempt
 				// add student entry to first in subject list
 				firstInSubject.add(studentEntry);
 				dbIdx++;
@@ -140,9 +111,9 @@ public class Main {
 						idx++;
 					}
 					commendationEntry.add(note); // Notes on units & mark of FIS
-					commendationEntry.add(firstInSubject.get(idx).get(COURSECODE));
-					commendationEntry.add(firstInSubject.get(idx).get(COURSEVERSION));
-					commendationEntry.add(firstInSubject.get(idx).get(COURSEATTEMPT));
+					commendationEntry.add(firstInSubject.get(idx-1).get(COURSECODE));
+					commendationEntry.add(firstInSubject.get(idx-1).get(COURSEVERSION));
+					commendationEntry.add(firstInSubject.get(idx-1).get(COURSEATTEMPT));
 					commendations.add( commendationEntry );
 				} else {
 					idx++;
@@ -194,8 +165,6 @@ public class Main {
 				haIdx++;
 			}
 			
-			printList(fisCopy);
-			
 			// write first in subject to database book
 			dbSheet = dbFile.getSheetAt(0);
 			for (int i=0; i<fisCopy.size(); i++) {
@@ -208,12 +177,10 @@ public class Main {
 				dbRow.createCell(5).setCellValue(mark.get(i));
 				dbRow.createCell(6).setCellValue(currentSession);
 				dbRow.createCell(7).setCellValue(fisCopy.get(i).get(COURSECODE));
-				dbRow.createCell(8).setCellValue(fisCopy.get(i).get(COURSEVERSION));
-				dbRow.createCell(9).setCellValue(fisCopy.get(i).get(COURSEATTEMPT));
+				dbRow.createCell(8).setCellValue(Integer.parseInt(fisCopy.get(i).get(COURSEVERSION)));
+				dbRow.createCell(9).setCellValue(Integer.parseInt(fisCopy.get(i).get(COURSEATTEMPT)));
 				dbIdx++;
 			}
-			
-			printList(commendations);
 			
 			// write commendations to database book
 			pcSheet = dbFile.getSheetAt(1);
@@ -225,8 +192,8 @@ public class Main {
 				pcRow.createCell(3).setCellValue(entry.get(3)); // Notes
 				pcRow.createCell(4).setCellValue(currentSession); // Session
 				pcRow.createCell(5).setCellValue(entry.get(4)); // Course Code
-				pcRow.createCell(6).setCellValue(entry.get(5)); // Course Version
-				pcRow.createCell(7).setCellValue(entry.get(6)); // Course Attempt
+				pcRow.createCell(6).setCellValue(Integer.parseInt(entry.get(5))); // Course Version
+				pcRow.createCell(7).setCellValue(Integer.parseInt(entry.get(6))); // Course Attempt
 				pcIdx++;
 			}
 			
@@ -251,8 +218,8 @@ public class Main {
 				fisRow.createCell(2).setCellValue( FISCOMMENT );
 				fisRow.createCell(4).setCellValue( entry.get(UNITCODE) );
 				fisRow.createCell(5).setCellValue( entry.get(COURSECODE) );
-				fisRow.createCell(6).setCellValue( entry.get(COURSEVERSION) );
-				fisRow.createCell(7).setCellValue( entry.get(COURSEATTEMPT) );
+				fisRow.createCell(6).setCellValue( Integer.parseInt(entry.get(COURSEVERSION) ) );
+				fisRow.createCell(7).setCellValue( Integer.parseInt(entry.get(COURSEATTEMPT) ) );
 				fisRow.createCell(8).setCellValue( year );
 				fisRow.createCell(9).setCellValue( session );
 				fisIdx++;
@@ -278,8 +245,8 @@ public class Main {
 				commdRow.createCell(0).setCellValue( Integer.parseInt(entry.get(0)) );
 				commdRow.createCell(2).setCellValue( COMMDCOMMENT );
 				commdRow.createCell(5).setCellValue( entry.get(4) );
-				commdRow.createCell(6).setCellValue( entry.get(5) );
-				commdRow.createCell(7).setCellValue( entry.get(6) );
+				commdRow.createCell(6).setCellValue( Integer.parseInt( entry.get(5) ) );
+				commdRow.createCell(7).setCellValue( Integer.parseInt( entry.get(6) ) );
 				commdRow.createCell(8).setCellValue( year );
 				commdRow.createCell(9).setCellValue( session );
 				commdIdx++;
@@ -329,8 +296,8 @@ public class Main {
 					    PrintWriter printWriter = new PrintWriter(fileWriter);
 					    printWriter.println("FILES CANNOT BE FOUND");
 					    printWriter.println("An error occurred while trying to access excel files. Double check the following:");
-					    printWriter.println("    -  Both files are renamed correctly as \"GeneratedFile\" and \"HighestAchieverDatabase\" ");
-					    printWriter.println("    -  And you are not currently accessing any relevant Excel files");
+					    printWriter.println("    -  Both files are renamed correctly as \"GeneratedFile\" and \"HighestAchieverDatabase\" (no spaces)");
+					    printWriter.println("    -  And you are not currently opening/accessing any relevant Excel files");
 					    printWriter.close();
 					    e.printStackTrace();
 					} catch (IOException e3) {
@@ -371,19 +338,50 @@ public class Main {
 		
 	}
 	
-//	public static HSSFSheet readExcel1(String path, int sheetIdx) throws IOException {
-//		FileInputStream inputStream = new FileInputStream(path);
-//		HSSFWorkbook wb = new HSSFWorkbook(inputStream);
-//		HSSFSheet sheet = wb.getSheetAt(sheetIdx);
-//		return sheet;
-//	}
-//	
-//	public static HSSFWorkbook readExcel2(String path) throws IOException {
-//		FileInputStream inputStream = new FileInputStream(path);
-//		HSSFWorkbook wb = new HSSFWorkbook(inputStream);
-//		return wb;
-//	}
-	
+	/**
+	 * 
+	 * @param file: generated file
+	 * 
+	 * updates "firstInSubject" to include all this-session FIS
+	 */
+	public static void findFirstInSubject( HSSFWorkbook file ) {
+		HSSFSheet sheet = file.getSheetAt(0);
+		int idx = 2;
+		HSSFRow row = sheet.getRow(idx);
+		String unitCode = sheet.getRow(idx).getCell(6).getStringCellValue();
+		
+		// generate array list of all first in subject student
+		ArrayList<StudentEntry> perUnitList = new ArrayList<StudentEntry>();
+
+		while (row.getCell(1)!=null) {
+			if ( sheet.getRow(idx).getCell(6).getStringCellValue().equals(unitCode) ) {
+				// extract student entry
+				int id = Integer.parseInt( row.getCell(0).getStringCellValue() ); // Student ID
+				String fName = row.getCell(2)==null?"":row.getCell(2).getStringCellValue(); // Student First Name
+				String lName = row.getCell(1).getStringCellValue(); // Student Last Name
+				String uCode = row.getCell(6).getStringCellValue(); // Unit Code
+				String uName = row.getCell(7).getStringCellValue(); // Unit Name
+				int m = (int) Math.round(row.getCell(18).getNumericCellValue()); // Mark
+				String cCode = row.getCell(13).getStringCellValue(); // Course Code
+				String cName = row.getCell(14).getStringCellValue();
+				int cVersion = (int) Math.round(row.getCell(15).getNumericCellValue()); // Course Version
+				int cAttempt =  (int) Math.round(row.getCell(16).getNumericCellValue()); // Course Attempt
+
+				//add Student Entry to each-unit list
+				StudentEntry student = new StudentEntry(id, fName, lName, uCode, uName, cCode, cName, cVersion, cAttempt, cAttempt)
+				perUnitList.add(student);
+				idx++;
+				row = sheet.getRow(idx);
+			} else {
+				addFirstInSubject(firstInSubject, perUnitList);
+				perUnitList.clear();
+				unitCode = row.getCell(6).getStringCellValue();
+			}
+		}
+		addFirstInSubject(firstInSubject, perUnitList);
+	}
+
+
 	public static HSSFWorkbook getWorkbook(String path) throws IOException {
 		FileInputStream inputStream = new FileInputStream(path);
 		HSSFWorkbook workbook = new HSSFWorkbook(inputStream);
@@ -391,7 +389,7 @@ public class Main {
 	}
 	
 	// Write the initial workbook
-	public static void writeFIS(HSSFWorkbook book, ArrayList<ArrayList<String>> list, ArrayList<Integer> grade) {
+	public static void writeFIS(HSSFWorkbook book, ArrayList<StudentEntry> list, ArrayList<Integer> grade) {
 		// Setup workbook
 		HSSFSheet sheet = book.createSheet("First in Subject");
 		// Create Title row
@@ -406,30 +404,36 @@ public class Main {
 		
 		// Fill all data rows
 		int idx=1;
-		for (ArrayList<String> studentEntry: list) {
+		for (StudentEntry student: list) {
 			HSSFRow row = sheet.createRow(idx);
-			row.createCell(0).setCellValue( Integer.parseInt(studentEntry.get(STUDENTID)) );
-			row.createCell(1).setCellValue(studentEntry.get(FIRSTNAME));
-			row.createCell(2).setCellValue(studentEntry.get(LASTNAME));
-			row.createCell(3).setCellValue(studentEntry.get(UNITCODE));
-			row.createCell(4).setCellValue(studentEntry.get(UNITNAME));
-			row.createCell(5).setCellValue(grade.get(idx-1));
-			row.createCell(6).setCellValue(currentSession);
+			row.createCell(0).setCellValue( student.studentID );
+			row.createCell(1).setCellValue( student.firstName );
+			row.createCell(2).setCellValue( student.lastName );
+			row.createCell(3).setCellValue( student.unitCode );
+			row.createCell(4).setCellValue( student.unitName );
+			row.createCell(5).setCellValue( student.mark );
+			row.createCell(6).setCellValue( currentSession );
 			idx++;
 		}
 	}
 	
-	// Add students who achieved first in subject to "target" list. Also populate a "mark" list with students's grades
-	public static void addFirstInSubject(ArrayList<ArrayList<String>> target, ArrayList<Integer> mark, ArrayList<ArrayList<String>> temp, ArrayList<Integer> tempMark) {
-		int topScore = tempMark.get(0);
-		if( temp.size() < 10 ) return;
+	/**
+	 * 
+	 * @param target
+	 * @param data
+	 * 
+	 * add first-place entry(ies) from "data" to "target"
+	 */
+	public static void addFirstInSubject(ArrayList<StudentEntry> target, ArrayList<StudentEntry> data) {
+		int topScore = data.get(0).mark;
+		// Requirement check
+		if( data.size() < enrolmentReq ) return;
 		if (topScore < 85) return; 
 		// Add all high-achievers
-		for(int i=0; i<temp.size(); i++) {
+		for(int i=0; i<data.size(); i++) {
 			// Add 1 high achiever data
-			if (tempMark.get(i) == topScore) {
-				target.add(temp.get(i));
-				mark.add(tempMark.get(i));
+			if (data.get(i).mark == topScore) {
+				target.add(data.get(i));
 			}
 		}
 	}
