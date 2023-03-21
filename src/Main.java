@@ -24,6 +24,7 @@ public class Main {
 	static final String COMMDCOMMENT = "FSECOMM";
 
 	static ArrayList<StudentEntry> firstInSubject = new ArrayList<StudentEntry>();
+	static ArrayList<StudentEntry> fisClone = new ArrayList<StudentEntry>();
 	static ArrayList<ArrayList<String>> commendations = new ArrayList<ArrayList<String>>();
 	static ArrayList<Integer> mark = new ArrayList<Integer>();
 	static int year = 0;
@@ -58,67 +59,16 @@ public class Main {
 			}
 
 			findFirstInSubject(gFile);
-
+			
 			// write FirstInSubject to output Excel Workbook
 			writeFIS(haFile, firstInSubject, mark);
 			
 			/** Step 2: Find all historical first in subject student from database & put them in array list **/
-			
-			// setup
-			@SuppressWarnings("unchecked")
-			ArrayList<ArrayList<String>> fisCopy = (ArrayList<ArrayList<String>>) firstInSubject.clone();
-			HSSFSheet dbSheet = dbFile.getSheetAt(0); // get sheet of all historic first in subject
-			HSSFRow dbRow = dbSheet.getRow(1);
-			int dbIdx = 1;
-			// generate list of all historical first in subject students
-			while (dbRow!=null) {
-				ArrayList<String> studentEntry = new ArrayList<String>();
-				studentEntry.add( ""+(int)dbRow.getCell(0).getNumericCellValue() ); // Student ID
-				// extra precaution because first name is nullable
-				String stdFirstName = dbRow.getCell(1)==null?"":dbRow.getCell(1).getStringCellValue();
-				studentEntry.add( stdFirstName ); // Student First Name
-				studentEntry.add( dbRow.getCell(2).getStringCellValue() ); // Student Last Name
-				studentEntry.add( dbRow.getCell(3).getStringCellValue() ); // Unit Code
-				studentEntry.add( dbRow.getCell(4).getStringCellValue() ); // Unit Name
-				mark.add( (int)Math.round(dbRow.getCell(5).getNumericCellValue()) ); // Mark
-				studentEntry.add( dbRow.getCell(7).getStringCellValue() ); // Course Code
-				studentEntry.add( "" + (int) Math.round(dbRow.getCell(8).getNumericCellValue()) ); // Course Version
-				studentEntry.add( "" + (int) Math.round(dbRow.getCell(9).getNumericCellValue()) ); // Course Attempt
-				// add student entry to first in subject list
-				firstInSubject.add(studentEntry);
-				dbIdx++;
-				dbRow = dbSheet.getRow(dbIdx);
-			}
-			
+			getAllHistoricalFIS(dbFile);
+
 			/** Step 3: Find all available commendations using the array list of ALL first in subject **/
 			
-			// sort first in subject list using student ID
-			firstInSubject.sort( new StudentEntryComparator() );
-			int idx = 0;
-			while (idx<firstInSubject.size()) {
-				// idx is valid & there are 2 consecutive first in subject entry
-				if (idx<(firstInSubject.size()-1) && firstInSubject.get(idx).get(0).equals(firstInSubject.get(idx+1).get(0))) {
-					String id = firstInSubject.get(idx).get(STUDENTID);
-					ArrayList<String> commendationEntry = new ArrayList<String>();
-					commendationEntry.add(firstInSubject.get(idx).get(STUDENTID)); // Student ID
-					commendationEntry.add(firstInSubject.get(idx).get(FIRSTNAME)); // Student First Name
-					commendationEntry.add(firstInSubject.get(idx).get(LASTNAME)); // Student Last Name
-					String note = firstInSubject.get(idx).get(UNITCODE);
-					idx++;
-					// record all FIS units for this 1 student ID
-					while( idx< firstInSubject.size() && id.equals(firstInSubject.get(idx).get(STUDENTID)) ) {
-						note += " - " + firstInSubject.get(idx).get(UNITCODE);
-						idx++;
-					}
-					commendationEntry.add(note); // Notes on units & mark of FIS
-					commendationEntry.add(firstInSubject.get(idx-1).get(COURSECODE));
-					commendationEntry.add(firstInSubject.get(idx-1).get(COURSEVERSION));
-					commendationEntry.add(firstInSubject.get(idx-1).get(COURSEATTEMPT));
-					commendations.add( commendationEntry );
-				} else {
-					idx++;
-				}
-			}
+
 
 			/** Step 4: Filter out students who have been previously commended **/
 			
@@ -342,7 +292,7 @@ public class Main {
 	 * 
 	 * @param file: generated file
 	 * 
-	 * updates "firstInSubject" to include all this-session FIS
+	 * [Step 1] updates "firstInSubject" to include all this-session FIS
 	 */
 	public static void findFirstInSubject( HSSFWorkbook file ) {
 		HSSFSheet sheet = file.getSheetAt(0);
@@ -355,20 +305,9 @@ public class Main {
 
 		while (row.getCell(1)!=null) {
 			if ( sheet.getRow(idx).getCell(6).getStringCellValue().equals(unitCode) ) {
-				// extract student entry
-				int id = Integer.parseInt( row.getCell(0).getStringCellValue() ); // Student ID
-				String fName = row.getCell(2)==null?"":row.getCell(2).getStringCellValue(); // Student First Name
-				String lName = row.getCell(1).getStringCellValue(); // Student Last Name
-				String uCode = row.getCell(6).getStringCellValue(); // Unit Code
-				String uName = row.getCell(7).getStringCellValue(); // Unit Name
-				int m = (int) Math.round(row.getCell(18).getNumericCellValue()); // Mark
-				String cCode = row.getCell(13).getStringCellValue(); // Course Code
-				String cName = row.getCell(14).getStringCellValue();
-				int cVersion = (int) Math.round(row.getCell(15).getNumericCellValue()); // Course Version
-				int cAttempt =  (int) Math.round(row.getCell(16).getNumericCellValue()); // Course Attempt
-
-				//add Student Entry to each-unit list
-				StudentEntry student = new StudentEntry(id, fName, lName, uCode, uName, cCode, cName, cVersion, cAttempt, cAttempt)
+				// get student entry
+				StudentEntry student = getStudentEntry(row);
+				// add student entry to list
 				perUnitList.add(student);
 				idx++;
 				row = sheet.getRow(idx);
@@ -381,6 +320,61 @@ public class Main {
 		addFirstInSubject(firstInSubject, perUnitList);
 	}
 
+	/**
+	 * 
+	 * @param file: database file
+	 * 
+	 * [Step 2] updates "firstInSubject" to include all historical FIS
+	 */
+	public static void getAllHistoricalFIS( HSSFWorkbook file ) {
+		// setup
+		fisClone = (ArrayList<StudentEntry>) firstInSubject.clone();
+		HSSFSheet sheet = file.getSheetAt(0); // get sheet of all historic first in subject
+		HSSFRow row = sheet.getRow(1);
+		int idx = 1;
+		// generate list of all historical first in subject students
+		while (row!=null) {
+			// get student entry
+			StudentEntry student = getStudentEntry(row);
+			// add student entry to list
+			firstInSubject.add(student);
+			idx++;
+			row = sheet.getRow(idx);
+		}
+	}
+
+	/**
+	 * [Step 3] updates "commendations" to include all commendations
+	 */
+	public static void findCommendations() {
+		// sort first in subject list using student ID
+		firstInSubject.sort( new StudentEntryComparator() );
+		int idx = 0;
+		while (idx<firstInSubject.size()) {
+			// idx is valid & there are 2 consecutive first in subject entry
+			if (idx<(firstInSubject.size()-1) && firstInSubject.get(idx).get(0).equals(firstInSubject.get(idx+1).get(0))) {
+				String id = firstInSubject.get(idx).get(STUDENTID);
+				ArrayList<String> commendationEntry = new ArrayList<String>();
+				commendationEntry.add(firstInSubject.get(idx).get(STUDENTID)); // Student ID
+				commendationEntry.add(firstInSubject.get(idx).get(FIRSTNAME)); // Student First Name
+				commendationEntry.add(firstInSubject.get(idx).get(LASTNAME)); // Student Last Name
+				String note = firstInSubject.get(idx).get(UNITCODE);
+				idx++;
+				// record all FIS units for this 1 student ID
+				while( idx< firstInSubject.size() && id.equals(firstInSubject.get(idx).get(STUDENTID)) ) {
+					note += " - " + firstInSubject.get(idx).get(UNITCODE);
+					idx++;
+				}
+				commendationEntry.add(note); // Notes on units & mark of FIS
+				commendationEntry.add(firstInSubject.get(idx-1).get(COURSECODE));
+				commendationEntry.add(firstInSubject.get(idx-1).get(COURSEVERSION));
+				commendationEntry.add(firstInSubject.get(idx-1).get(COURSEATTEMPT));
+				commendations.add( commendationEntry );
+			} else {
+				idx++;
+			}
+		}
+	}
 
 	public static HSSFWorkbook getWorkbook(String path) throws IOException {
 		FileInputStream inputStream = new FileInputStream(path);
@@ -388,6 +382,25 @@ public class Main {
 		return workbook;
 	}
 	
+	public static StudentEntry getStudentEntry(HSSFRow row) {
+		// extract student entry
+		int id = Integer.parseInt( row.getCell(0).getStringCellValue() ); // Student ID
+		String fName = row.getCell(2)==null?"":row.getCell(2).getStringCellValue(); // Student First Name
+		String lName = row.getCell(1).getStringCellValue(); // Student Last Name
+		String uCode = row.getCell(6).getStringCellValue(); // Unit Code
+		String uName = row.getCell(7).getStringCellValue(); // Unit Name
+		int m = (int) Math.round(row.getCell(18).getNumericCellValue()); // Mark
+		String cCode = row.getCell(13).getStringCellValue(); // Course Code
+		String cName = row.getCell(14).getStringCellValue();
+		int cVersion = (int) Math.round(row.getCell(15).getNumericCellValue()); // Course Version
+		int cAttempt =  (int) Math.round(row.getCell(16).getNumericCellValue()); // Course Attempt
+
+		//add Student Entry to each-unit list
+		StudentEntry student = new StudentEntry(id, fName, lName, uCode, uName, cCode, cName, cVersion, cAttempt, m);
+
+		return student;
+	}
+
 	// Write the initial workbook
 	public static void writeFIS(HSSFWorkbook book, ArrayList<StudentEntry> list, ArrayList<Integer> grade) {
 		// Setup workbook
