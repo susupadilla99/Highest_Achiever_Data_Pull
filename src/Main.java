@@ -140,6 +140,21 @@ public class Main {
 					}
 				}
 			}
+		} catch (IllegalStateException e) {
+			try {
+				FileWriter fileWriter = new FileWriter("ERROR.txt");
+			    PrintWriter printWriter = new PrintWriter(fileWriter);
+			    printWriter.println("UNEXPECTED CELL VALUE");
+			    printWriter.println("A cell with invalid value has been found. Double check the following:");
+				printWriter.println("    -  This happens when a cell that's supposed to have Numeric value (e.g StudentID) have Text values instead (or vice versa)");
+			    printWriter.println("    -  Check if any Numeric Cell is stored as Text");
+				printWriter.println("    -  Check if any cell have values they're not supposed to");
+			    printWriter.println("    -  This typically only happen to HighAchieverDatabase.xls");
+			    printWriter.close();
+			    e.printStackTrace();
+			} catch (IOException e1) {
+				System.exit(1);
+			}
 		} catch (NullPointerException e) { // Blank cell exception
 			try {
 				FileWriter fileWriter = new FileWriter("ERROR.txt");
@@ -191,7 +206,7 @@ public class Main {
 		while (row.getCell(1)!=null) {
 			if ( sheet.getRow(idx).getCell(6).getStringCellValue().equals(unitCode) ) {
 				// get student entry
-				StudentEntry student = getStudentEntry(row);
+				StudentEntry student = getGeneratedStudentEntry(row);
 				// add student entry to list
 				perUnitList.add(student);
 				idx++;
@@ -220,7 +235,7 @@ public class Main {
 		// generate list of all historical first in subject students
 		while (row!=null) {
 			// get student entry
-			StudentEntry student = getStudentEntry(row);
+			StudentEntry student = getDatabaseStudentEntry(row);
 			// add student entry to list
 			firstInSubject.add(student);
 			idx++;
@@ -241,15 +256,16 @@ public class Main {
 			// idx is valid & there are 2 consecutive first in subject entry
 			if (idx<(firstInSubject.size()-1) && firstInSubject.get(idx).studentID == firstInSubject.get(idx+1).studentID ) {
 				// retrieve commendations entry details
-				int id = firstInSubject.get(idx).studentID;
-				String note = firstInSubject.get(idx).unitCode;
+				StudentEntry entry = firstInSubject.get(idx);
+				String note = firstInSubject.get(idx).unitCode + "(" + firstInSubject.get(idx).mark + ")";
 				idx++;
 				// record all FIS units for this 1 student ID
-				while( idx< firstInSubject.size() && id == firstInSubject.get(idx).studentID) {
+				while( idx< firstInSubject.size() && entry.studentID == firstInSubject.get(idx).studentID) {
 					note += " - " + firstInSubject.get(idx).unitCode + "(" + firstInSubject.get(idx).mark + ")";
 					idx++;
 				}
-				StudentEntry commendationEntry = firstInSubject.get(idx).copy();
+				// create deep copy of entry
+				StudentEntry commendationEntry = entry.copy();
 				commendationEntry.notes = note;
 				// add commendation entry to commendations list
 				commendations.add(commendationEntry);
@@ -296,7 +312,7 @@ public class Main {
 		return workbook;
 	}
 	
-	public static StudentEntry getStudentEntry(HSSFRow row) {
+	public static StudentEntry getGeneratedStudentEntry(HSSFRow row) {
 		// extract student entry
 		int id = Integer.parseInt( row.getCell(0).getStringCellValue() ); // Student ID
 		String fName = row.getCell(2)==null?"":row.getCell(2).getStringCellValue(); // Student First Name
@@ -315,6 +331,25 @@ public class Main {
 		return student;
 	}
 
+	public static StudentEntry getDatabaseStudentEntry(HSSFRow row) {
+		// extract student entry
+		int id = (int) row.getCell(0).getNumericCellValue(); // Student ID
+		String fName = row.getCell(1)==null?"":row.getCell(1).getStringCellValue(); // Student First Name
+		String lName = row.getCell(2).getStringCellValue(); // Student Last Name
+		String uCode = row.getCell(3).getStringCellValue(); // Unit Code
+		String uName = row.getCell(4).getStringCellValue(); // Unit Name
+		int m = (int) Math.round(row.getCell(5).getNumericCellValue()); // Mark
+		String cCode = row.getCell(7).getStringCellValue(); // Course Code
+		String cName = row.getCell(8).getStringCellValue(); // Course Name
+		int cVersion = (int) Math.round(row.getCell(9).getNumericCellValue()); // Course Version
+		int cAttempt =  (int) Math.round(row.getCell(10).getNumericCellValue()); // Course Attempt
+
+		//add Student Entry to each-unit list
+		StudentEntry student = new StudentEntry(id, fName, lName, uCode, uName, cCode, cName, cVersion, cAttempt, m);
+
+		return student;
+	}
+	
 	// Write FIS to high achiever file
 	public static void writeFIS(HSSFWorkbook book, ArrayList<StudentEntry> list) {
 		// Setup workbook
@@ -385,8 +420,9 @@ public class Main {
 			row.createCell(5).setCellValue( entry.mark );
 			row.createCell(6).setCellValue( currentSession );
 			row.createCell(7).setCellValue( entry.courseCode);
-			row.createCell(8).setCellValue( entry.courseVersion );
-			row.createCell(9).setCellValue( entry.courseAttempt );
+			row.createCell(8).setCellValue( entry.courseName );
+			row.createCell(9).setCellValue( entry.courseVersion );
+			row.createCell(10).setCellValue( entry.courseAttempt );
 			fisIdx++;
 		}
 
@@ -400,8 +436,9 @@ public class Main {
 			row.createCell(3).setCellValue( entry.notes ); // Notes
 			row.createCell(4).setCellValue( currentSession ); // Session
 			row.createCell(5).setCellValue( entry.courseCode ); // Course Code
-			row.createCell(6).setCellValue( entry.courseVersion ); // Course Version
-			row.createCell(7).setCellValue( entry.courseAttempt ); // Course Attempt
+			row.createCell(6).setCellValue( entry.courseName ); // Course Name
+			row.createCell(7).setCellValue( entry.courseVersion ); // Course Version
+			row.createCell(8).setCellValue( entry.courseAttempt ); // Course Attempt
 			commdIdx++;
 		}
 	}
