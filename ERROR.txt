@@ -1,0 +1,13 @@
+UNEXPECTED ERROR
+An unexpected error has occurred. Daniel did not have enough foresight to see this one coming.
+At this point, you should call Daniel in and let him deal with his own mistake.
+Alternatively, you can call in another computer science student and let them deal with Daniel's mess :)
+Below is complete garbage that's meant for Daniel to look at. Daniel (or unfortunate computer science student), if you reading this, goodluck.
+----------------------------------------------------------------------------------------------------------------------------------------------
+java.lang.IllegalStateException: Cannot get a STRING value from a NUMERIC cell
+	at org.apache.poi.hssf.usermodel.HSSFCell.typeMismatch(HSSFCell.java:647)
+	at org.apache.poi.hssf.usermodel.HSSFCell.getRichStringCellValue(HSSFCell.java:743)
+	at org.apache.poi.hssf.usermodel.HSSFCell.getStringCellValue(HSSFCell.java:726)
+	at Main.getStudentEntry(Main.java:301)
+	at Main.getAllHistoricalFIS(Main.java:223)
+	at Main.main(Main.java:70)
